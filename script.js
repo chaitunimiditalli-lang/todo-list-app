@@ -1,48 +1,44 @@
 const taskInput = document.getElementById("taskInput");
 const addBtn = document.getElementById("addBtn");
 const taskList = document.getElementById("taskList");
-const filterBtns = document.querySelectorAll(".filter-btn");
 
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 let currentFilter = "all";
 
-// Save tasks
 function saveTasks() {
     localStorage.setItem("tasks", JSON.stringify(tasks));
 }
 
-// Render tasks
 function renderTasks() {
+
     taskList.innerHTML = "";
 
-    let filteredTasks = tasks;
+    const filteredTasks = tasks.filter(task => {
 
-    if (currentFilter === "active") {
-        filteredTasks = tasks.filter(task => !task.completed);
-    } else if (currentFilter === "completed") {
-        filteredTasks = tasks.filter(task => task.completed);
-    }
+        if (currentFilter === "active") {
+            return !task.completed;
+        }
+
+        if (currentFilter === "completed") {
+            return task.completed;
+        }
+
+        return true;
+    });
 
     filteredTasks.forEach(task => {
+
         const li = document.createElement("li");
 
-        li.className = task.completed
-            ? "task completed"
-            : "task";
-
-        li.dataset.id = task.id;
-
         li.innerHTML = `
-            <span>${task.text}</span>
+            <span class="${task.completed ? 'completed' : ''}">
+                ${task.text}
+            </span>
 
-            <div class="actions">
-                <button class="complete-btn">
-                    ${task.completed ? "Undo" : "Done"}
-                </button>
-
-                <button class="edit-btn">Edit</button>
-
-                <button class="delete-btn">Delete</button>
+            <div>
+                <button onclick="toggleTask(${task.id})">✓</button>
+                <button onclick="editTask(${task.id})">Edit</button>
+                <button onclick="deleteTask(${task.id})">Delete</button>
             </div>
         `;
 
@@ -50,18 +46,15 @@ function renderTasks() {
     });
 }
 
-// Add task
-function addTask() {
+addBtn.addEventListener("click", () => {
+
     const text = taskInput.value.trim();
 
-    if (text === "") {
-        alert("Please enter a task");
-        return;
-    }
+    if (text === "") return;
 
     tasks.push({
         id: Date.now(),
-        text,
+        text: text,
         completed: false
     });
 
@@ -69,65 +62,52 @@ function addTask() {
     renderTasks();
 
     taskInput.value = "";
-}
-
-// Add button click
-addBtn.addEventListener("click", addTask);
-
-// Enter key support
-taskInput.addEventListener("keypress", e => {
-    if (e.key === "Enter") {
-        addTask();
-    }
 });
 
-// Event Delegation
-taskList.addEventListener("click", e => {
-    const li = e.target.closest(".task");
+function toggleTask(id) {
 
-    if (!li) return;
+    const task = tasks.find(t => t.id === id);
 
-    const id = Number(li.dataset.id);
-
-    // Complete
-    if (e.target.classList.contains("complete-btn")) {
-        tasks = tasks.map(task =>
-            task.id === id
-                ? { ...task, completed: !task.completed }
-                : task
-        );
-    }
-
-    // Edit
-    if (e.target.classList.contains("edit-btn")) {
-        const task = tasks.find(task => task.id === id);
-
-        const updatedText = prompt(
-            "Edit Task:",
-            task.text
-        );
-
-        if (updatedText && updatedText.trim() !== "") {
-            task.text = updatedText.trim();
-        }
-    }
-
-    // Delete
-    if (e.target.classList.contains("delete-btn")) {
-        tasks = tasks.filter(task => task.id !== id);
+    if (task) {
+        task.completed = !task.completed;
     }
 
     saveTasks();
     renderTasks();
-});
+}
 
-// Filter buttons
-filterBtns.forEach(btn => {
+function deleteTask(id) {
+
+    tasks = tasks.filter(task => task.id !== id);
+
+    saveTasks();
+    renderTasks();
+}
+
+function editTask(id) {
+
+    const task = tasks.find(t => t.id === id);
+
+    if (!task) return;
+
+    const newTask = prompt("Edit Task", task.text);
+
+    if (newTask && newTask.trim() !== "") {
+
+        task.text = newTask.trim();
+
+        saveTasks();
+        renderTasks();
+    }
+}
+
+document.querySelectorAll("[data-filter]").forEach(btn => {
+
     btn.addEventListener("click", () => {
 
-        filterBtns.forEach(b =>
-            b.classList.remove("active")
-        );
+        document.querySelectorAll("[data-filter]").forEach(b => {
+            b.classList.remove("active");
+        });
 
         btn.classList.add("active");
 
@@ -135,7 +115,7 @@ filterBtns.forEach(btn => {
 
         renderTasks();
     });
+
 });
 
-// Initial render
 renderTasks();
